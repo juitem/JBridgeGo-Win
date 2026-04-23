@@ -44,6 +44,37 @@ func (a *App) SwitchToUrl(targetUrl string) *state.AppState {
 	}
 	if len(newRecent) > 10 { newRecent = newRecent[:10] }
 	a.state.RecentUrls = newRecent
+	
+	foundRot := false
+	for _, u := range a.state.RotationUrls { if u == targetUrl { foundRot = true; break } }
+	if !foundRot { a.state.RotationUrls = append(a.state.RotationUrls, targetUrl) }
+    
+	a.storage.Save(a.state)
+	return a.state
+}
+
+func (a *App) DeleteUrl(targetUrl string) *state.AppState {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	filter := func(list []string) []string {
+		var res []string
+		for _, u := range list { if u != targetUrl { res = append(res, u) } }
+		return res
+	}
+	a.state.PinnedUrls = filter(a.state.PinnedUrls)
+	a.state.RecentUrls = filter(a.state.RecentUrls)
+	a.state.RotationUrls = filter(a.state.RotationUrls)
+	a.state.PreloadUrls = filter(a.state.PreloadUrls)
+	delete(a.state.UrlAliases, targetUrl)
+	
+	if a.state.ServerURL == targetUrl {
+		a.state.ServerURL = ""
+		if len(a.state.PinnedUrls) > 0 { 
+			a.state.ServerURL = a.state.PinnedUrls[0] 
+		} else if len(a.state.RecentUrls) > 0 { 
+			a.state.ServerURL = a.state.RecentUrls[0] 
+		}
+	}
 	a.storage.Save(a.state)
 	return a.state
 }
@@ -63,6 +94,36 @@ func (a *App) TogglePin(targetUrl string) *state.AppState {
 	return a.state
 }
 
+func (a *App) ToggleRotation(targetUrl string) *state.AppState {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	found := false
+	var newList []string
+	for _, u := range a.state.RotationUrls {
+		if u == targetUrl { found = true; continue }
+		newList = append(newList, u)
+	}
+	if !found { newList = append(newList, targetUrl) }
+	a.state.RotationUrls = newList
+	a.storage.Save(a.state)
+	return a.state
+}
+
+func (a *App) TogglePreload(targetUrl string) *state.AppState {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	found := false
+	var newList []string
+	for _, u := range a.state.PreloadUrls {
+		if u == targetUrl { found = true; continue }
+		newList = append(newList, u)
+	}
+	if !found { newList = append(newList, targetUrl) }
+	a.state.PreloadUrls = newList
+	a.storage.Save(a.state)
+	return a.state
+}
+
 func (a *App) AdjustZoom(delta int) *state.AppState {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -74,40 +135,60 @@ func (a *App) AdjustZoom(delta int) *state.AppState {
 	newZoom := currentZoom + delta
 	if newZoom < 50 { newZoom = 50 }
 	if newZoom > 300 { newZoom = 300 }
-	if hostPort != "" {
-		a.state.HostZoomLevels[hostPort] = newZoom
-	} else {
-		a.state.ZoomLevel = newZoom
-	}
+	if hostPort != "" { a.state.HostZoomLevels[hostPort] = newZoom } else { a.state.ZoomLevel = newZoom }
 	a.storage.Save(a.state)
 	return a.state
 }
 
 func (a *App) SetAlias(targetUrl string, alias string) *state.AppState {
-    a.mu.Lock()
-    defer a.mu.Unlock()
-    if alias == "" {
-        delete(a.state.UrlAliases, targetUrl)
-    } else {
-        a.state.UrlAliases[targetUrl] = alias
-    }
-    a.storage.Save(a.state)
-    return a.state
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if alias == "" { delete(a.state.UrlAliases, targetUrl) } else { a.state.UrlAliases[targetUrl] = alias }
+	a.storage.Save(a.state)
+	return a.state
 }
 
-func (a *App) ToggleRotation(targetUrl string) *state.AppState {
-    a.mu.Lock()
-    defer a.mu.Unlock()
-    found := false
-    var newList []string
-    for _, u := range a.state.RotationUrls {
-        if u == targetUrl { found = true; continue }
-        newList = append(newList, u)
-    }
-    if !found { newList = append(newList, targetUrl) }
-    a.state.RotationUrls = newList
-    a.storage.Save(a.state)
-    return a.state
+func (a *App) ToggleStatusBar() *state.AppState {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.state.HideStatusBar = !a.state.HideStatusBar
+	a.storage.Save(a.state)
+	return a.state
+}
+
+func (a *App) ToggleKeepScreenOn() *state.AppState {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.state.KeepScreenOn = !a.state.KeepScreenOn
+	a.storage.Save(a.state)
+	return a.state
+}
+
+func (a *App) ToggleShowRotationBtns() *state.AppState {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.state.ShowRotationBtns = !a.state.ShowRotationBtns
+	a.storage.Save(a.state)
+	return a.state
+}
+
+func (a *App) AddTrustedHost(host string) *state.AppState {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, h := range a.state.ManualTrustedHosts { if h == host { return a.state } }
+	a.state.ManualTrustedHosts = append(a.state.ManualTrustedHosts, host)
+	a.storage.Save(a.state)
+	return a.state
+}
+
+func (a *App) RemoveTrustedHost(host string) *state.AppState {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	var newList []string
+	for _, h := range a.state.ManualTrustedHosts { if h != host { newList = append(newList, h) } }
+	a.state.ManualTrustedHosts = newList
+	a.storage.Save(a.state)
+	return a.state
 }
 
 func extractHostPort(rawUrl string) string {
