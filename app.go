@@ -162,8 +162,8 @@ func (a *App) ToggleGridMode() *state.AppState {
 func (a *App) MoveUrl(targetUrl string, delta int) *state.AppState {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	
-	moveIn := func(list []string) []string {
+
+	swapIn := func(list []string) []string {
 		idx := -1
 		for i, u := range list { if u == targetUrl { idx = i; break } }
 		if idx == -1 { return list }
@@ -174,9 +174,32 @@ func (a *App) MoveUrl(targetUrl string, delta int) *state.AppState {
 		newList[idx], newList[newIdx] = newList[newIdx], newList[idx]
 		return newList
 	}
-	
-	a.state.PinnedUrls = moveIn(a.state.PinnedUrls)
-	a.state.RotationUrls = moveIn(a.state.RotationUrls)
+
+	isPinned := false
+	for _, u := range a.state.PinnedUrls { if u == targetUrl { isPinned = true; break } }
+
+	if isPinned {
+		a.state.PinnedUrls = swapIn(a.state.PinnedUrls)
+		// pinned 항목들의 상대 순서를 pinnedUrls 순서에 맞게 rotation에 동기화
+		pins := a.state.PinnedUrls
+		pinnedSet := map[string]bool{}
+		for _, u := range pins { pinnedSet[u] = true }
+		pinnedInRot := []string{}
+		for _, u := range pins {
+			for _, r := range a.state.RotationUrls {
+				if r == u { pinnedInRot = append(pinnedInRot, u); break }
+			}
+		}
+		pIdx := 0
+		newRot := make([]string, len(a.state.RotationUrls))
+		for i, u := range a.state.RotationUrls {
+			if pinnedSet[u] { newRot[i] = pinnedInRot[pIdx]; pIdx++ } else { newRot[i] = u }
+		}
+		a.state.RotationUrls = newRot
+	} else {
+		a.state.RotationUrls = swapIn(a.state.RotationUrls)
+	}
+
 	a.storage.Save(a.state)
 	return a.state
 }
