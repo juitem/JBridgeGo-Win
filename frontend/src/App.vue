@@ -15,6 +15,7 @@ const addUrlInput = ref('')
 const addAliasInput = ref('')
 const editingUrl = ref(null)
 const reorderMode = ref(false)
+const rotationReorderMode = ref(false)
 const trustInput = ref('')
 
 const iframeRef = ref(null)
@@ -135,11 +136,14 @@ async function handleToggleKeepScreen() { updateState(await api.ToggleKeepScreen
 async function handleToggleRotationBtns() { updateState(await api.ToggleShowRotationBtns()) }
 async function handleAddTrust() { if(trustInput.value){ updateState(await api.AddTrustedHost(trustInput.value)); trustInput.value='' } }
 async function handleRemoveTrust(h) { updateState(await api.RemoveTrustedHost(h)) }
-async function handleDelete(url) { if(confirm('삭제하시겠습니까?')) updateState(await api.DeleteUrl(url)) }
+async function handleDelete(url) { updateState(await api.DeleteUrl(url)) }
 
 // Computed
 const currentIndex = computed(() => (state.rotationUrls || []).indexOf(state.serverUrl))
-const recentOnly = computed(() => (state.recentUrls || []).filter(u => !(state.pinnedUrls || []).includes(u)))
+// 순환 목록 (pinned 제외) — rotationUrls 순서 유지
+const rotationOnly = computed(() => (state.rotationUrls || []).filter(u => !(state.pinnedUrls || []).includes(u)))
+// 최근 (pinned도 rotation도 아닌 것만)
+const recentOnly = computed(() => (state.recentUrls || []).filter(u => !(state.pinnedUrls || []).includes(u) && !(state.rotationUrls || []).includes(u)))
 // 그리드: preloadUrls 우선 → pinnedUrls → rotationUrls
 const gridUrls = computed(() => {
   const pre = state.preloadUrls || []
@@ -272,12 +276,37 @@ function stopDrag() { isDragging.value = false }
             </div>
           </div>
 
-          <!-- Recent Section -->
+          <!-- Rotation Section -->
+          <div v-if="rotationOnly.length > 0" class="section">
+            <div class="flex-between">
+              <div class="section-title">순환 목록</div>
+              <span @click="rotationReorderMode = !rotationReorderMode" class="reorder-toggle" :class="{active: rotationReorderMode}">{{ rotationReorderMode ? '완료' : '순서변경' }}</span>
+            </div>
+            <div v-for="(url, idx) in rotationOnly" :key="url" class="url-row" :class="{ active: url === state.serverUrl }">
+              <template v-if="rotationReorderMode">
+                <span @click="handleMove(url, -1)" class="move-btn" :class="{disabled: idx === 0}">▲</span>
+                <span @click="handleMove(url, 1)" class="move-btn" :class="{disabled: idx === rotationOnly.length - 1}">▼</span>
+              </template>
+              <template v-else>
+                <span @click="handleTogglePin(url)" class="pin-icon">☆</span>
+                <span @click="handleToggleRotation(url)" class="rot-icon active">&lt;&gt;</span>
+                <span @click="handleTogglePreload(url)" class="pre-icon" :class="{active: state.preloadUrls.includes(url)}">⚡</span>
+              </template>
+              <div @click="handleSwitch(url)" class="url-info">
+                <div class="alias">{{ state.urlAliases[url] || url }}</div>
+                <div v-if="state.urlAliases[url]" class="url-sub">{{ url }}</div>
+              </div>
+              <span v-if="!rotationReorderMode" @click="openEdit(url)" class="edit-btn">✎</span>
+              <span v-if="!rotationReorderMode" @click="handleDelete(url)" class="del-btn">✕</span>
+            </div>
+          </div>
+
+          <!-- Recent Section (rotation/pinned 아닌 것만) -->
           <div v-if="recentOnly.length > 0" class="section">
             <div class="section-title">최근</div>
             <div v-for="url in recentOnly" :key="url" class="url-row" :class="{ active: url === state.serverUrl }">
               <span @click="handleTogglePin(url)" class="pin-icon">☆</span>
-              <span @click="handleToggleRotation(url)" class="rot-icon" :class="{active: state.rotationUrls.includes(url)}">&lt;&gt;</span>
+              <span @click="handleToggleRotation(url)" class="rot-icon">&lt;&gt;</span>
               <span @click="handleTogglePreload(url)" class="pre-icon" :class="{active: state.preloadUrls.includes(url)}">⚡</span>
               <div @click="handleSwitch(url)" class="url-info">
                 <div class="alias">{{ state.urlAliases[url] || url }}</div>
