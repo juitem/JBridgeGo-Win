@@ -37,6 +37,11 @@ func (s *Storage) Load() (*AppState, error) {
 	}
 	if state.UrlAliases == nil { state.UrlAliases = make(map[string]string) }
 	if state.HostZoomLevels == nil { state.HostZoomLevels = make(map[string]int) }
+	if state.PinnedUrls == nil { state.PinnedUrls = []string{} }
+	if state.RecentUrls == nil { state.RecentUrls = []string{} }
+	if state.RotationUrls == nil { state.RotationUrls = []string{} }
+	if state.PreloadUrls == nil { state.PreloadUrls = []string{} }
+	if state.ManualTrustedHosts == nil { state.ManualTrustedHosts = []string{} }
 	return &state, nil
 }
 

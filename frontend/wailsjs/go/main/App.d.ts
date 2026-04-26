@@ -10,19 +10,31 @@ export function DeleteUrl(arg1:string):Promise<state.AppState>;
 
 export function GetState():Promise<state.AppState>;
 
+export function GetWindowState():Promise<string>;
+
+export function MoveUrl(arg1:string,arg2:number):Promise<state.AppState>;
+
 export function RemoveTrustedHost(arg1:string):Promise<state.AppState>;
 
 export function SetAlias(arg1:string,arg2:string):Promise<state.AppState>;
 
 export function SwitchToUrl(arg1:string):Promise<state.AppState>;
 
+export function ToggleFullscreen():Promise<boolean>;
+
+export function ToggleGridMode():Promise<state.AppState>;
+
 export function ToggleKeepScreenOn():Promise<state.AppState>;
+
+export function ToggleMaximize():Promise<boolean>;
 
 export function TogglePin(arg1:string):Promise<state.AppState>;
 
 export function TogglePreload(arg1:string):Promise<state.AppState>;
 
 export function ToggleRotation(arg1:string):Promise<state.AppState>;
+
+export function ToggleScrollLock():Promise<state.AppState>;
 
 export function ToggleShowRotationBtns():Promise<state.AppState>;
 

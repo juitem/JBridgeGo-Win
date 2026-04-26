@@ -14,6 +14,7 @@ type AppState struct {
 	PreloadUrls        []string          `json:"preloadUrls"`
 	UrlAliases         map[string]string `json:"urlAliases"`
 	ScrollLock         bool              `json:"scrollLock"`
+	GridMode           bool              `json:"gridMode"`
 	ManualTrustedHosts []string          `json:"manualTrustedHosts"`
 	HostZoomLevels     map[string]int    `json:"hostZoomLevels"`
 }

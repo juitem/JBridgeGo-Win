@@ -14,6 +14,7 @@ export namespace state {
 	    preloadUrls: string[];
 	    urlAliases: Record<string, string>;
 	    scrollLock: boolean;
+	    gridMode: boolean;
 	    manualTrustedHosts: string[];
 	    hostZoomLevels: Record<string, number>;
 	
@@ -36,6 +37,7 @@ export namespace state {
 	        this.preloadUrls = source["preloadUrls"];
 	        this.urlAliases = source["urlAliases"];
 	        this.scrollLock = source["scrollLock"];
+	        this.gridMode = source["gridMode"];
 	        this.manualTrustedHosts = source["manualTrustedHosts"];
 	        this.hostZoomLevels = source["hostZoomLevels"];
 	    }

@@ -5,6 +5,7 @@ import (
 	"jbridgego-win/internal/state"
 	"net/url"
 	"sync"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type App struct {
@@ -34,10 +35,12 @@ func (a *App) GetState() *state.AppState {
 }
 
 func (a *App) SwitchToUrl(targetUrl string) *state.AppState {
+	println("[Go] Switching to URL:", targetUrl)
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.state.ServerURL = targetUrl
 	a.state.SetupComplete = true
+	// 최근 목록 업데이트
 	newRecent := []string{targetUrl}
 	for _, u := range a.state.RecentUrls {
 		if u != targetUrl { newRecent = append(newRecent, u) }
@@ -57,7 +60,7 @@ func (a *App) DeleteUrl(targetUrl string) *state.AppState {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	filter := func(list []string) []string {
-		var res []string
+		res := []string{}
 		for _, u := range list { if u != targetUrl { res = append(res, u) } }
 		return res
 	}
@@ -83,7 +86,7 @@ func (a *App) TogglePin(targetUrl string) *state.AppState {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	found := false
-	var newPins []string
+	newPins := []string{}
 	for _, u := range a.state.PinnedUrls {
 		if u == targetUrl { found = true; continue }
 		newPins = append(newPins, u)
@@ -98,7 +101,7 @@ func (a *App) ToggleRotation(targetUrl string) *state.AppState {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	found := false
-	var newList []string
+	newList := []string{}
 	for _, u := range a.state.RotationUrls {
 		if u == targetUrl { found = true; continue }
 		newList = append(newList, u)
@@ -113,7 +116,7 @@ func (a *App) TogglePreload(targetUrl string) *state.AppState {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	found := false
-	var newList []string
+	newList := []string{}
 	for _, u := range a.state.PreloadUrls {
 		if u == targetUrl { found = true; continue }
 		newList = append(newList, u)
@@ -148,6 +151,63 @@ func (a *App) SetAlias(targetUrl string, alias string) *state.AppState {
 	return a.state
 }
 
+func (a *App) ToggleGridMode() *state.AppState {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.state.GridMode = !a.state.GridMode
+	a.storage.Save(a.state)
+	return a.state
+}
+
+func (a *App) MoveUrl(targetUrl string, delta int) *state.AppState {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	
+	moveIn := func(list []string) []string {
+		idx := -1
+		for i, u := range list { if u == targetUrl { idx = i; break } }
+		if idx == -1 { return list }
+		newIdx := idx + delta
+		if newIdx < 0 || newIdx >= len(list) { return list }
+		newList := make([]string, len(list))
+		copy(newList, list)
+		newList[idx], newList[newIdx] = newList[newIdx], newList[idx]
+		return newList
+	}
+	
+	a.state.PinnedUrls = moveIn(a.state.PinnedUrls)
+	a.state.RotationUrls = moveIn(a.state.RotationUrls)
+	a.storage.Save(a.state)
+	return a.state
+}
+
+func (a *App) AddTrustedHost(host string) *state.AppState {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, h := range a.state.ManualTrustedHosts { if h == host { return a.state } }
+	a.state.ManualTrustedHosts = append(a.state.ManualTrustedHosts, host)
+	a.storage.Save(a.state)
+	return a.state
+}
+
+func (a *App) RemoveTrustedHost(host string) *state.AppState {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	newList := []string{}
+	for _, h := range a.state.ManualTrustedHosts { if h != host { newList = append(newList, h) } }
+	a.state.ManualTrustedHosts = newList
+	a.storage.Save(a.state)
+	return a.state
+}
+
+func (a *App) ToggleScrollLock() *state.AppState {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.state.ScrollLock = !a.state.ScrollLock
+	a.storage.Save(a.state)
+	return a.state
+}
+
 func (a *App) ToggleStatusBar() *state.AppState {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -172,23 +232,28 @@ func (a *App) ToggleShowRotationBtns() *state.AppState {
 	return a.state
 }
 
-func (a *App) AddTrustedHost(host string) *state.AppState {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	for _, h := range a.state.ManualTrustedHosts { if h == host { return a.state } }
-	a.state.ManualTrustedHosts = append(a.state.ManualTrustedHosts, host)
-	a.storage.Save(a.state)
-	return a.state
+func (a *App) ToggleMaximize() bool {
+	if runtime.WindowIsMaximised(a.ctx) {
+		runtime.WindowUnmaximise(a.ctx)
+		return false
+	}
+	runtime.WindowMaximise(a.ctx)
+	return true
 }
 
-func (a *App) RemoveTrustedHost(host string) *state.AppState {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	var newList []string
-	for _, h := range a.state.ManualTrustedHosts { if h != host { newList = append(newList, h) } }
-	a.state.ManualTrustedHosts = newList
-	a.storage.Save(a.state)
-	return a.state
+func (a *App) ToggleFullscreen() bool {
+	if runtime.WindowIsFullscreen(a.ctx) {
+		runtime.WindowUnfullscreen(a.ctx)
+		return false
+	}
+	runtime.WindowFullscreen(a.ctx)
+	return true
+}
+
+func (a *App) GetWindowState() string {
+	if runtime.WindowIsFullscreen(a.ctx) { return "fullscreen" }
+	if runtime.WindowIsMaximised(a.ctx)  { return "maximized" }
+	return "normal"
 }
 
 func extractHostPort(rawUrl string) string {

@@ -18,6 +18,14 @@ export function GetState() {
   return window['go']['main']['App']['GetState']();
 }
 
+export function GetWindowState() {
+  return window['go']['main']['App']['GetWindowState']();
+}
+
+export function MoveUrl(arg1, arg2) {
+  return window['go']['main']['App']['MoveUrl'](arg1, arg2);
+}
+
 export function RemoveTrustedHost(arg1) {
   return window['go']['main']['App']['RemoveTrustedHost'](arg1);
 }
@@ -30,8 +38,20 @@ export function SwitchToUrl(arg1) {
   return window['go']['main']['App']['SwitchToUrl'](arg1);
 }
 
+export function ToggleFullscreen() {
+  return window['go']['main']['App']['ToggleFullscreen']();
+}
+
+export function ToggleGridMode() {
+  return window['go']['main']['App']['ToggleGridMode']();
+}
+
 export function ToggleKeepScreenOn() {
   return window['go']['main']['App']['ToggleKeepScreenOn']();
+}
+
+export function ToggleMaximize() {
+  return window['go']['main']['App']['ToggleMaximize']();
 }
 
 export function TogglePin(arg1) {
@@ -44,6 +64,10 @@ export function TogglePreload(arg1) {
 
 export function ToggleRotation(arg1) {
   return window['go']['main']['App']['ToggleRotation'](arg1);
+}
+
+export function ToggleScrollLock() {
+  return window['go']['main']['App']['ToggleScrollLock']();
 }
 
 export function ToggleShowRotationBtns() {

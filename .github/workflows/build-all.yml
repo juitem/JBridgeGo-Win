@@ -2,19 +2,25 @@ name: Build Desktop Apps
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   build:
     strategy:
-      fail-fast: false # 하나가 실패해도 다른 플랫폼은 계속 진행
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
             platform: windows/amd64
+            artifact: jbridgego-windows
           - os: macos-latest
             platform: darwin/arm64
-          - os: ubuntu-latest
+            artifact: jbridgego-macos-arm64
+          - os: ubuntu-22.04
             platform: linux/amd64
+            artifact: jbridgego-linux
 
     runs-on: ${{ matrix.os }}
 
@@ -25,7 +31,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version-file: 'go.mod'
           cache: true
 
       - name: Setup Node.js
@@ -36,21 +42,26 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 
       - name: Install Linux Dependencies
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            pkg-config \
+            build-essential
 
       - name: Build App
         run: |
           export PATH=$PATH:$(go env GOPATH)/bin
-          wails build -platform ${{ matrix.platform }}
+          wails build -platform ${{ matrix.platform }} -o jbridgego
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: jbridgego-${{ matrix.os }}
+          name: ${{ matrix.artifact }}
           path: build/bin/*
+          retention-days: 30
