@@ -53,6 +53,14 @@ onMounted(async () => {
   updateState(s)
   windowState.value = await api.GetWindowState()
   window.addEventListener('keydown', onKeyDown)
+  // Route target="_blank" / window.open() calls from iframes to system browser.
+  // Wails has no multi-window support; iframe popups propagate here when allow="popups" is set.
+  window.open = (url) => {
+    if (url && url !== 'about:blank' && !String(url).startsWith('javascript:')) {
+      api.OpenInBrowser(String(url))
+    }
+    return null
+  }
   resetFade()
 })
 
@@ -180,7 +188,7 @@ function stopDrag() { isDragging.value = false }
         <template v-if="gridUrls.length > 0">
           <div v-for="url in gridUrls" :key="url" class="grid-item">
             <div class="grid-label">{{ state.urlAliases[url] || url }}</div>
-            <iframe :src="url" class="grid-webview" allow="fullscreen; clipboard-read; clipboard-write"></iframe>
+            <iframe :src="url" class="grid-webview" allow="fullscreen; clipboard-read; clipboard-write; popups"></iframe>
           </div>
         </template>
         <div v-else class="grid-empty">
@@ -192,7 +200,7 @@ function stopDrag() { isDragging.value = false }
       <div v-else class="single-webview-container">
         <iframe v-if="state.serverUrl" ref="iframeRef" :src="state.serverUrl"
                 class="main-webview" :style="{ width: (100 / (effectiveZoom / 100)) + '%', height: (100 / (effectiveZoom / 100)) + '%', transform: 'scale(' + (effectiveZoom / 100) + ')', transformOrigin: 'top left' }"
-                allow="fullscreen; clipboard-read; clipboard-write"></iframe>
+                allow="fullscreen; clipboard-read; clipboard-write; popups"></iframe>
         <div v-else class="empty-state">
           <h1 class="rainbow-text">JBridgeGo</h1>
           <button @click="state.showMenu = true" class="btn-primary">시작하기 (메뉴 열기)</button>

@@ -256,6 +256,10 @@ func (a *App) GetWindowState() string {
 	return "normal"
 }
 
+func (a *App) OpenInBrowser(targetUrl string) {
+	runtime.BrowserOpenURL(a.ctx, targetUrl)
+}
+
 func extractHostPort(rawUrl string) string {
 	u, err := url.Parse(rawUrl)
 	if err != nil { return "" }

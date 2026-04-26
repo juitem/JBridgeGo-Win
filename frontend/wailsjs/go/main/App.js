@@ -22,6 +22,10 @@ export function GetWindowState() {
   return window['go']['main']['App']['GetWindowState']();
 }
 
+export function OpenInBrowser(arg1) {
+  return window['go']['main']['App']['OpenInBrowser'](arg1);
+}
+
 export function MoveUrl(arg1, arg2) {
   return window['go']['main']['App']['MoveUrl'](arg1, arg2);
 }
