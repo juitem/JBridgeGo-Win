@@ -50,14 +50,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             libgtk-3-dev \
-            libwebkit2gtk-4.1-dev \
+            libwebkit2gtk-4.0-dev \
             pkg-config \
             build-essential
 
       - name: Build App
-        run: |
-          export PATH=$PATH:$(go env GOPATH)/bin
-          wails build -platform ${{ matrix.platform }} -o jbridgego
+        run: wails build -platform ${{ matrix.platform }} -o jbridgego
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
