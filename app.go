@@ -188,10 +188,13 @@ func (a *App) MoveUrl(targetUrl string, delta int) *state.AppState {
 			if !pinnedSet[u] { rotOnly = append(rotOnly, u) }
 		}
 		rotOnly = swapIn(rotOnly)
-		// rotation-only 재정렬 후 반영
-		a.state.RotationUrls = rotOnly
+		// pinned 항목 자리는 그대로 두고 non-pinned 슬롯만 교체
+		j := 0
+		for i, u := range a.state.RotationUrls {
+			if !pinnedSet[u] { a.state.RotationUrls[i] = rotOnly[j]; j++ }
+		}
 	}
-	// rotationUrls 항상 정규화: pinnedUrls 순 → rotationOnly 순
+	// rotationUrls 정규화: pinnedUrls 순 → rotationOnly 순
 	a.state.RotationUrls = normalizeRotation(a.state.PinnedUrls, a.state.RotationUrls)
 
 	a.storage.Save(a.state)
