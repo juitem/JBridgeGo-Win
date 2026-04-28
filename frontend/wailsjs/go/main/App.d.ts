@@ -12,9 +12,9 @@ export function GetState():Promise<state.AppState>;
 
 export function GetWindowState():Promise<string>;
 
-export function OpenInBrowser(arg1:string):Promise<void>;
-
 export function MoveUrl(arg1:string,arg2:number):Promise<state.AppState>;
+
+export function OpenInBrowser(arg1:string):Promise<void>;
 
 export function RemoveTrustedHost(arg1:string):Promise<state.AppState>;
 

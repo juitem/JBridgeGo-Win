@@ -139,7 +139,17 @@ async function handleRemoveTrust(h) { updateState(await api.RemoveTrustedHost(h)
 async function handleDelete(url) { updateState(await api.DeleteUrl(url)) }
 
 // Computed
-const currentIndex = computed(() => (state.rotationUrls || []).indexOf(state.serverUrl))
+// 오버레이 메뉴 표시 순서와 일치: pinnedUrls(rotation 포함된 것) → rotationOnly
+const effectiveRotation = computed(() => {
+  const pins = state.pinnedUrls || []
+  const rot = state.rotationUrls || []
+  const rotSet = new Set(rot)
+  return [
+    ...pins.filter(u => rotSet.has(u)),
+    ...rot.filter(u => !pins.includes(u)),
+  ]
+})
+const currentIndex = computed(() => effectiveRotation.value.indexOf(state.serverUrl))
 // 순환 목록 (pinned 제외) — rotationUrls 순서 유지
 const rotationOnly = computed(() => (state.rotationUrls || []).filter(u => !(state.pinnedUrls || []).includes(u)))
 // 최근 (pinned도 rotation도 아닌 것만)
@@ -236,9 +246,9 @@ function stopDrag() { isDragging.value = false }
         <div class="toolbar-row">
           <button @click.stop="state.showMenu = true" class="info-btn">{{ expanded ? 'ⓘ' : '☰' }}</button>
           <div class="divider"></div>
-          <button @click.stop="handleSwitch(state.rotationUrls[(currentIndex - 1 + state.rotationUrls.length) % state.rotationUrls.length])" title="이전">⟨</button>
-          <div class="indicators">{{ currentIndex >= 0 ? currentIndex + 1 : 0 }} / {{ state.rotationUrls.length || 0 }}</div>
-          <button @click.stop="handleSwitch(state.rotationUrls[(currentIndex + 1) % state.rotationUrls.length])" title="다음">⟩</button>
+          <button @click.stop="handleSwitch(effectiveRotation[(currentIndex - 1 + effectiveRotation.length) % effectiveRotation.length])" title="이전">⟨</button>
+          <div class="indicators">{{ currentIndex >= 0 ? currentIndex + 1 : 0 }} / {{ effectiveRotation.length || 0 }}</div>
+          <button @click.stop="handleSwitch(effectiveRotation[(currentIndex + 1) % effectiveRotation.length])" title="다음">⟩</button>
           <div class="divider"></div>
           <button @click.stop="expanded = !expanded" class="toggle-btn">{{ expanded ? '✕' : '⋯' }}</button>
         </div>
