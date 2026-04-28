@@ -15,7 +15,6 @@ const addUrlInput = ref('')
 const addAliasInput = ref('')
 const editingUrl = ref(null)
 const reorderMode = ref(false)
-const rotationReorderMode = ref(false)
 const trustInput = ref('')
 
 const iframeRef = ref(null)
@@ -82,6 +81,7 @@ async function handleSwitch(url) {
     const newState = await api.SwitchToUrl(url)
     state.showMenu = false
     state.gridMode = false
+    reorderMode.value = false
     // updateState 전에 먼저 iframe src 직접 변경 — :src 바인딩 갱신 전에 미리 이동 시작
     if (iframeRef.value) iframeRef.value.src = url
     updateState(newState)
@@ -261,12 +261,15 @@ function stopDrag() { isDragging.value = false }
         <h2 class="rainbow-text small">JBridgeGo Desktop</h2>
         <div class="scroll-area">
           
+          <!-- Pinned + Rotation 공통 순서변경 버튼 -->
+          <div class="flex-between" style="margin-bottom:4px;">
+            <div></div>
+            <span @click="reorderMode = !reorderMode" class="reorder-toggle" :class="{active: reorderMode}">{{ reorderMode ? '완료' : '순서변경' }}</span>
+          </div>
+
           <!-- Pinned Section -->
           <div class="section">
-            <div class="flex-between">
-              <div class="section-title">즐겨찾기</div>
-              <span @click="reorderMode = !reorderMode" class="reorder-toggle" :class="{active: reorderMode}">{{ reorderMode ? '완료' : '순서변경' }}</span>
-            </div>
+            <div class="section-title">즐겨찾기</div>
             <div v-for="(url, idx) in state.pinnedUrls" :key="url" class="url-row" :class="{ active: url === state.serverUrl }">
               <template v-if="reorderMode">
                 <span @click="handleMove(url, -1)" class="move-btn" :class="{disabled: idx === 0}">▲</span>
@@ -288,12 +291,9 @@ function stopDrag() { isDragging.value = false }
 
           <!-- Rotation Section -->
           <div v-if="rotationOnly.length > 0" class="section">
-            <div class="flex-between">
-              <div class="section-title">순환 목록</div>
-              <span @click="rotationReorderMode = !rotationReorderMode" class="reorder-toggle" :class="{active: rotationReorderMode}">{{ rotationReorderMode ? '완료' : '순서변경' }}</span>
-            </div>
+            <div class="section-title">순환 목록</div>
             <div v-for="(url, idx) in rotationOnly" :key="url" class="url-row" :class="{ active: url === state.serverUrl }">
-              <template v-if="rotationReorderMode">
+              <template v-if="reorderMode">
                 <span @click="handleMove(url, -1)" class="move-btn" :class="{disabled: idx === 0}">▲</span>
                 <span @click="handleMove(url, 1)" class="move-btn" :class="{disabled: idx === rotationOnly.length - 1}">▼</span>
               </template>
@@ -306,8 +306,8 @@ function stopDrag() { isDragging.value = false }
                 <div class="alias">{{ state.urlAliases[url] || url }}</div>
                 <div v-if="state.urlAliases[url]" class="url-sub">{{ url }}</div>
               </div>
-              <span v-if="!rotationReorderMode" @click="openEdit(url)" class="edit-btn">✎</span>
-              <span v-if="!rotationReorderMode" @click="handleDelete(url)" class="del-btn">✕</span>
+              <span v-if="!reorderMode" @click="openEdit(url)" class="edit-btn">✎</span>
+              <span v-if="!reorderMode" @click="handleDelete(url)" class="del-btn">✕</span>
             </div>
           </div>
 
