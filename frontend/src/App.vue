@@ -18,7 +18,6 @@ const reorderMode = ref(false)
 const trustInput = ref('')
 
 const iframeRef = ref(null)
-const isMac = ref(false)
 const windowState = ref('normal') // 'normal' | 'maximized' | 'fullscreen'
 const updateState = (s) => {
   if (!s) return
@@ -36,36 +35,24 @@ function onKeyDown(e) {
   if (!mod) return
   if (e.key === '[' || e.key === 'ArrowLeft') {
     e.preventDefault()
-    const rot = effectiveRotation.value
-    if (rot.length === 0) return
-    handleSwitch(rot[(currentIndex.value - 1 + rot.length) % rot.length])
+    const len = state.rotationUrls.length
+    if (len === 0) return
+    const idx = (currentIndex.value - 1 + len) % len
+    handleSwitch(state.rotationUrls[idx])
   } else if (e.key === ']' || e.key === 'ArrowRight') {
     e.preventDefault()
-    const rot = effectiveRotation.value
-    if (rot.length === 0) return
-    handleSwitch(rot[(currentIndex.value + 1) % rot.length])
+    const len = state.rotationUrls.length
+    if (len === 0) return
+    const idx = (currentIndex.value + 1) % len
+    handleSwitch(state.rotationUrls[idx])
   }
-}
-
-// WKWebView iframe 내 xterm.js에서 compositionend가 안 발화하는 문제 우회.
-// 부모 프레임(Wails 네이티브)에서 compositionend를 잡아 iframe으로 postMessage.
-function onCompositionStart() {
-  iframeRef.value?.contentWindow?.postMessage({ type: 'ime_start' }, '*')
-}
-function onCompositionEnd(e) {
-  const data = e.data
-  if (!data || /^[\x20-\x7E]+$/.test(data)) return
-  iframeRef.value?.contentWindow?.postMessage({ type: 'ime_input', data }, '*')
 }
 
 onMounted(async () => {
   const s = await api.GetState()
   updateState(s)
-  isMac.value = await api.IsMacOS()
   windowState.value = await api.GetWindowState()
   window.addEventListener('keydown', onKeyDown)
-  window.addEventListener('compositionstart', onCompositionStart)
-  window.addEventListener('compositionend', onCompositionEnd)
   // Route target="_blank" / window.open() calls from iframes to system browser.
   // Wails has no multi-window support; iframe popups propagate here when allow="popups" is set.
   window.open = (url) => {
@@ -79,14 +66,12 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeyDown)
-  window.removeEventListener('compositionstart', onCompositionStart)
-  window.removeEventListener('compositionend', onCompositionEnd)
 })
 
 // Browser Navigation
-const goBack = () => { if (isMac.value) api.ChildGoBack(); else iframeRef.value?.contentWindow?.history.back() }
-const goForward = () => { if (isMac.value) api.ChildGoForward(); else iframeRef.value?.contentWindow?.history.forward() }
-const reload = () => { if (isMac.value) api.ChildReload(); else if (iframeRef.value) iframeRef.value.src = iframeRef.value.src }
+const goBack = () => iframeRef.value?.contentWindow?.history.back()
+const goForward = () => iframeRef.value?.contentWindow?.history.forward()
+const reload = () => { if (iframeRef.value) iframeRef.value.src = iframeRef.value.src }
 const goHome = () => handleSwitch(state.pinnedUrls[0] || state.serverUrl)
 
 async function handleSwitch(url) {
@@ -97,9 +82,8 @@ async function handleSwitch(url) {
     state.showMenu = false
     state.gridMode = false
     reorderMode.value = false
-    // non-mac: iframe src 직접 변경 — :src 바인딩 갱신 전에 미리 이동 시작
-    // mac: SwitchToUrl 내부에서 platformNavigate 호출됨
-    if (!isMac.value && iframeRef.value) iframeRef.value.src = url
+    // updateState 전에 먼저 iframe src 직접 변경 — :src 바인딩 갱신 전에 미리 이동 시작
+    if (iframeRef.value) iframeRef.value.src = url
     updateState(newState)
     resetFade()
   } catch (e) {
@@ -210,9 +194,9 @@ function stopDrag() { isDragging.value = false }
 </script>
 
 <template>
-  <div class="main-container" :class="{ 'is-mac': isMac }" @mousemove="onDrag" @mouseup="stopDrag">
+  <div class="main-container" @mousemove="onDrag" @mouseup="stopDrag">
     <!-- Webview Wrapper -->
-    <div class="webview-wrapper" :class="{ 'scroll-locked': state.scrollLock, 'is-mac': isMac }">
+    <div class="webview-wrapper" :class="{ 'scroll-locked': state.scrollLock }">
       <!-- Grid Mode -->
       <div v-if="state.gridMode" class="grid-container" :style="{ gridTemplateColumns: gridColumns }">
         <template v-if="gridUrls.length > 0">
@@ -227,12 +211,11 @@ function stopDrag() { isDragging.value = false }
         </div>
       </div>
       <!-- Single Mode -->
-      <div v-else class="single-webview-container" :class="{ 'is-mac': isMac }">
-        <!-- macOS: child WKWebView renders below; iframe not used -->
-        <iframe v-if="state.serverUrl && !isMac" ref="iframeRef" :src="state.serverUrl"
+      <div v-else class="single-webview-container">
+        <iframe v-if="state.serverUrl" ref="iframeRef" :src="state.serverUrl"
                 class="main-webview" :style="{ width: (100 / (effectiveZoom / 100)) + '%', height: (100 / (effectiveZoom / 100)) + '%', transform: 'scale(' + (effectiveZoom / 100) + ')', transformOrigin: 'top left' }"
                 allow="fullscreen; clipboard-read; clipboard-write; popups"></iframe>
-        <div v-if="!state.serverUrl" class="empty-state">
+        <div v-else class="empty-state">
           <h1 class="rainbow-text">JBridgeGo</h1>
           <button @click="state.showMenu = true" class="btn-primary">시작하기 (메뉴 열기)</button>
         </div>
@@ -426,12 +409,6 @@ function stopDrag() { isDragging.value = false }
 .webview-wrapper { height: 100vh; width: 100vw; position: relative; overflow: hidden; background: #1e1e2e; }
 .single-webview-container { width: 100%; height: 100%; position: relative; }
 .main-webview { position: absolute; top: 0; left: 0; border: none; background: #1e1e2e; display: block; }
-
-/* macOS: child WKWebView renders below — parent must be fully transparent and non-blocking */
-.main-container.is-mac { background: transparent; }
-.webview-wrapper.is-mac { background: transparent; }
-.single-webview-container.is-mac { background: transparent; pointer-events: none; }
-.single-webview-container.is-mac .empty-state { pointer-events: auto; }
 .lock-overlay { position: absolute; inset: 0; z-index: 50; background: transparent; }
 
 .grid-container { display: grid; height: 100vh; gap: 4px; padding: 4px; background: #11111b; grid-auto-rows: 1fr; }

@@ -26,7 +26,6 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	platformSetup()
 }
 
 func (a *App) GetState() *state.AppState {
@@ -41,7 +40,6 @@ func (a *App) SwitchToUrl(targetUrl string) *state.AppState {
 	defer a.mu.Unlock()
 	a.state.ServerURL = targetUrl
 	a.state.SetupComplete = true
-	platformNavigate(targetUrl)
 	// 최근 목록 업데이트
 	newRecent := []string{targetUrl}
 	for _, u := range a.state.RecentUrls {
@@ -299,11 +297,6 @@ func normalizeRotation(pinnedUrls, rotationUrls []string) []string {
 	}
 	return result
 }
-
-func (a *App) IsMacOS() bool       { return platformIsMac() }
-func (a *App) ChildGoBack()        { platformGoBack() }
-func (a *App) ChildGoForward()     { platformGoForward() }
-func (a *App) ChildReload()        { platformReload() }
 
 func extractHostPort(rawUrl string) string {
 	u, err := url.Parse(rawUrl)
