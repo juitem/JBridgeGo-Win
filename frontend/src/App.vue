@@ -247,7 +247,11 @@ function stopDrag() { isDragging.value = false }
           <button @click.stop="state.showMenu = true" class="info-btn">{{ expanded ? 'ⓘ' : '☰' }}</button>
           <div class="divider"></div>
           <button @click.stop="handleSwitch(effectiveRotation[(currentIndex - 1 + effectiveRotation.length) % effectiveRotation.length])" title="이전">⟨</button>
-          <div class="indicators">{{ currentIndex >= 0 ? currentIndex + 1 : 0 }} / {{ effectiveRotation.length || 0 }}</div>
+          <div class="indicators">
+            <span v-for="(_, i) in effectiveRotation" :key="i" class="indicator-dot" :class="{ active: i === currentIndex }">
+              {{ i === currentIndex ? (i + 1) : '' }}
+            </span>
+          </div>
           <button @click.stop="handleSwitch(effectiveRotation[(currentIndex + 1) % effectiveRotation.length])" title="다음">⟩</button>
           <div class="divider"></div>
           <button @click.stop="expanded = !expanded" class="toggle-btn">{{ expanded ? '✕' : '⋯' }}</button>
@@ -436,7 +440,9 @@ function stopDrag() { isDragging.value = false }
 .toolbar-row button:hover { background: #45475a; }
 .toolbar-row button.active { background: #cba6f7; color: #1e1e2e; }
 .divider { width: 2px; height: 24px; background: #45475a; border-radius: 1px; }
-.indicators { color: #cba6f7; font-weight: bold; min-width: 50px; text-align: center; font-family: monospace; font-size: 14px; }
+.indicators { display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 50px; }
+.indicator-dot { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #45475a; width: 8px; height: 8px; font-size: 0; transition: all 0.15s; flex-shrink: 0; }
+.indicator-dot.active { background: #cba6f7; color: #1e1e2e; width: 20px; height: 20px; font-size: 11px; font-weight: bold; font-family: monospace; }
 .toggle-btn { color: #cba6f7 !important; }
 .info-btn { color: #89dceb !important; }
 
