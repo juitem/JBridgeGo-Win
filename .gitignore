@@ -5,3 +5,4 @@ frontend/dist
 tmp_build
 GEMINI.md
 .claude/
+.playwright-mcp/
