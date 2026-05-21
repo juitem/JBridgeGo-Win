@@ -1,3 +1,5 @@
 #!/bin/bash
-export PATH=$PATH:$(go env GOPATH)/bin
-wails dev
+set -e
+cd "$(dirname "$0")"
+npm install
+npm run dev

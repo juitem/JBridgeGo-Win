@@ -1,19 +1,30 @@
-# README
+# JBridge Desktop
 
-## About
+Electron 기반 데스크탑 셸 — JBridge5 등 웹 서비스를 macOS / Windows / Linux에서 동일한 동작으로 임베드합니다.
 
-This is the official Wails Vue template.
+## Requirements
+- Node.js 20+
+- npm
 
-You can configure the project by editing `wails.json`. More information about the project settings can be found
-here: https://wails.io/docs/reference/project-config
+## Development
+```bash
+npm install
+npm run dev
+```
 
-## Live Development
+## Build
+```bash
+npm run build:mac     # .dmg
+npm run build:win     # .exe (NSIS)
+npm run build:linux   # .AppImage, .deb
+```
+결과물은 `release/` 디렉토리에 생성됩니다.
 
-To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
-server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
-and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
-to this in your browser, and you can call your Go code from devtools.
+## Settings
+설정 파일 위치(OS별):
+- macOS: `~/Library/Application Support/jbridge-desktop/settings.json`
+- Windows: `%APPDATA%/jbridge-desktop/settings.json`
+- Linux: `~/.config/jbridge-desktop/settings.json`
 
-## Building
-
-To build a redistributable, production mode package, use `wails build`.
+## History
+이전 Wails(Go) 구현은 `legacy` 브랜치에 보존되어 있습니다.
