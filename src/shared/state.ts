@@ -15,6 +15,18 @@ export interface AppState {
   gridMode: boolean
   manualTrustedHosts: string[]
   hostZoomLevels: Record<string, number>
+  gridLayout: GridLayout
+  gridSlots: string[]
+}
+
+export type GridLayout = 'auto' | '1x2' | '2x1' | '2x2' | '2x3' | '3x2' | '3x3'
+
+export const GRID_LAYOUTS: GridLayout[] = ['auto', '1x2', '2x1', '2x2', '2x3', '3x2', '3x3']
+
+export function gridDims(layout: GridLayout): { rows: number; cols: number } | null {
+  if (layout === 'auto') return null
+  const [r, c] = layout.split('x').map(Number)
+  return { rows: r, cols: c }
 }
 
 export function defaultState(): AppState {
@@ -34,7 +46,9 @@ export function defaultState(): AppState {
     scrollLock: false,
     gridMode: false,
     manualTrustedHosts: [],
-    hostZoomLevels: {}
+    hostZoomLevels: {},
+    gridLayout: 'auto',
+    gridSlots: []
   }
 }
 
@@ -57,6 +71,8 @@ export interface JBridgeApi {
   toggleStatusBar(): Promise<AppState>
   toggleKeepScreenOn(): Promise<AppState>
   toggleShowRotationBtns(): Promise<AppState>
+  setGridLayout(layout: GridLayout): Promise<AppState>
+  setGridSlot(index: number, url: string): Promise<AppState>
   toggleMaximize(): Promise<boolean>
   toggleFullscreen(): Promise<boolean>
   getWindowState(): Promise<WindowMode>

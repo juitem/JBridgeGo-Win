@@ -11,3 +11,4 @@ release/
 !.env.example
 .claude/
 .playwright-mcp/
+.antigravitycli/

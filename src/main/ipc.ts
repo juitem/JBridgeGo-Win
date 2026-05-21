@@ -1,12 +1,30 @@
-import { BrowserWindow, ipcMain, shell } from 'electron'
-import { AppState, WindowMode } from '../shared/state'
+import { BrowserWindow, ipcMain, powerSaveBlocker, shell } from 'electron'
+import { AppState, GridLayout, WindowMode, gridDims } from '../shared/state'
 import { loadState, saveState } from './store'
 
 let state: AppState = loadState()
+let powerSaveBlockerId: number | null = null
+
+function applyKeepScreenOn(): void {
+  if (state.keepScreenOn) {
+    if (powerSaveBlockerId === null || !powerSaveBlocker.isStarted(powerSaveBlockerId)) {
+      powerSaveBlockerId = powerSaveBlocker.start('prevent-display-sleep')
+    }
+  } else if (powerSaveBlockerId !== null) {
+    if (powerSaveBlocker.isStarted(powerSaveBlockerId)) {
+      powerSaveBlocker.stop(powerSaveBlockerId)
+    }
+    powerSaveBlockerId = null
+  }
+}
 
 function commit(): AppState {
   saveState(state)
   return state
+}
+
+export function syncOsSideEffects(): void {
+  applyKeepScreenOn()
 }
 
 function hostOf(url: string): string {
@@ -143,11 +161,31 @@ export function registerIpc(getWin: () => BrowserWindow | null): void {
 
   ipcMain.handle('state:toggleKeepScreenOn', () => {
     state.keepScreenOn = !state.keepScreenOn
+    applyKeepScreenOn()
     return commit()
   })
 
   ipcMain.handle('state:toggleShowRotationBtns', () => {
     state.showRotationBtns = !state.showRotationBtns
+    return commit()
+  })
+
+  ipcMain.handle('state:setGridLayout', (_e, layout: GridLayout) => {
+    state.gridLayout = layout
+    const dims = gridDims(layout)
+    const need = dims ? dims.rows * dims.cols : 0
+    const slots = [...state.gridSlots]
+    if (slots.length < need) slots.push(...Array(need - slots.length).fill(''))
+    if (slots.length > need) slots.length = need
+    state.gridSlots = slots
+    return commit()
+  })
+
+  ipcMain.handle('state:setGridSlot', (_e, index: number, url: string) => {
+    const slots = [...state.gridSlots]
+    while (slots.length <= index) slots.push('')
+    slots[index] = url
+    state.gridSlots = slots
     return commit()
   })
 

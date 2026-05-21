@@ -1,7 +1,7 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { join } from 'path'
-import { registerIpc } from './ipc'
+import { registerIpc, syncOsSideEffects } from './ipc'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -45,6 +45,7 @@ app.whenReady().then(() => {
   })
 
   registerIpc(() => mainWindow)
+  syncOsSideEffects()
   createWindow()
 
   app.on('activate', () => {

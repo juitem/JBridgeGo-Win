@@ -18,6 +18,8 @@ const api = {
   ToggleStatusBar: () => window.api.toggleStatusBar(),
   ToggleKeepScreenOn: () => window.api.toggleKeepScreenOn(),
   ToggleShowRotationBtns: () => window.api.toggleShowRotationBtns(),
+  SetGridLayout: (layout) => window.api.setGridLayout(layout),
+  SetGridSlot: (index, url) => window.api.setGridSlot(index, url),
   ToggleMaximize: () => window.api.toggleMaximize(),
   ToggleFullscreen: () => window.api.toggleFullscreen(),
   OpenInBrowser: (url) => window.api.openInBrowser(url)
@@ -26,8 +28,16 @@ const api = {
 const state = reactive({
   serverUrl: '', gridMode: false, scrollLock: false, zoomLevel: 100, hideStatusBar: true,
   pinnedUrls: [], recentUrls: [], rotationUrls: [], preloadUrls: [],
-  urlAliases: {}, keepScreenOn: false, manualTrustedHosts: [], showRotationBtns: true, showMenu: false
+  urlAliases: {}, keepScreenOn: false, manualTrustedHosts: [], showRotationBtns: true, showMenu: false,
+  gridLayout: 'auto', gridSlots: []
 })
+
+const GRID_LAYOUTS = ['auto', '1x2', '2x1', '2x2', '2x3', '3x2', '3x3']
+function gridDims(layout) {
+  if (layout === 'auto') return null
+  const [r, c] = layout.split('x').map(Number)
+  return { rows: r, cols: c }
+}
 
 // UI States
 const expanded = ref(true)
@@ -185,18 +195,40 @@ const rotationOnly = computed(() => (state.rotationUrls || []).filter(u => !(sta
 const recentOnly = computed(() => (state.recentUrls || []).filter(u => !(state.pinnedUrls || []).includes(u) && !(state.rotationUrls || []).includes(u)))
 // 그리드: preloadUrls 우선 → pinnedUrls → rotationUrls
 const gridUrls = computed(() => {
+  if (state.gridLayout !== 'auto') {
+    const dims = gridDims(state.gridLayout)
+    const need = dims.rows * dims.cols
+    const slots = [...(state.gridSlots || [])]
+    while (slots.length < need) slots.push('')
+    slots.length = need
+    return slots
+  }
   const pre = state.preloadUrls || []
   const pin = state.pinnedUrls || []
   const rot = state.rotationUrls || []
   return pre.length > 0 ? pre : pin.length > 0 ? pin : rot
 })
 const gridColumns = computed(() => {
+  if (state.gridLayout !== 'auto') {
+    const dims = gridDims(state.gridLayout)
+    return Array(dims.cols).fill('1fr').join(' ')
+  }
   const n = gridUrls.value.length
   if (n <= 1) return '1fr'
   if (n <= 2) return '1fr 1fr'
   if (n <= 4) return '1fr 1fr'
   return '1fr 1fr 1fr'
 })
+const allUrls = computed(() => {
+  const set = new Set([
+    ...(state.pinnedUrls || []),
+    ...(state.rotationUrls || []),
+    ...(state.recentUrls || [])
+  ])
+  return [...set]
+})
+async function handleSetGridLayout(layout) { updateState(await api.SetGridLayout(layout)) }
+async function handleSetGridSlot(index, url) { updateState(await api.SetGridSlot(index, url)) }
 const effectiveZoom = computed(() => {
   if (!state.serverUrl) return state.zoomLevel
   try {
@@ -229,9 +261,15 @@ function stopDrag() { isDragging.value = false }
       <!-- Grid Mode -->
       <div v-if="state.gridMode" class="grid-container" :style="{ gridTemplateColumns: gridColumns }">
         <template v-if="gridUrls.length > 0">
-          <div v-for="url in gridUrls" :key="url" class="grid-item">
-            <div class="grid-label">{{ state.urlAliases[url] || url }}</div>
-            <iframe :src="url" class="grid-webview" allow="fullscreen; clipboard-read; clipboard-write; popups"></iframe>
+          <div v-for="(url, idx) in gridUrls" :key="idx" class="grid-item">
+            <template v-if="url">
+              <div class="grid-label">{{ state.urlAliases[url] || url }}</div>
+              <iframe :src="url" class="grid-webview" allow="fullscreen; clipboard-read; clipboard-write; popups"></iframe>
+            </template>
+            <div v-else class="grid-slot-empty">
+              <span class="slot-idx">{{ idx + 1 }}</span>
+              <span class="slot-hint">메뉴 → 그리드 설정에서 URL 지정</span>
+            </div>
           </div>
         </template>
         <div v-else class="grid-empty">
@@ -398,6 +436,27 @@ function stopDrag() { isDragging.value = false }
             </div>
           </div>
 
+          <!-- Grid Layout -->
+          <div class="section grid-settings">
+            <div class="section-title">그리드 설정</div>
+            <div class="layout-chips">
+              <span v-for="opt in GRID_LAYOUTS" :key="opt"
+                    class="layout-chip" :class="{ active: state.gridLayout === opt }"
+                    @click="handleSetGridLayout(opt)">
+                {{ opt === 'auto' ? '자동' : opt.replace('x', '×') }}
+              </span>
+            </div>
+            <div v-if="state.gridLayout !== 'auto'" class="slot-list">
+              <div v-for="(slotUrl, idx) in state.gridSlots" :key="idx" class="slot-row">
+                <span class="slot-num">{{ idx + 1 }}</span>
+                <select :value="slotUrl" @change="handleSetGridSlot(idx, $event.target.value)" class="slot-select">
+                  <option value="">— 비움 —</option>
+                  <option v-for="u in allUrls" :key="u" :value="u">{{ state.urlAliases[u] || u }}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <!-- Clipboard -->
           <button @click="handlePaste" class="btn-paste">📋 클립보드 붙여넣기</button>
 
@@ -487,6 +546,19 @@ function stopDrag() { isDragging.value = false }
 .section-title { font-size: 12px; font-weight: bold; color: #89dceb; }
 .reorder-toggle { font-size: 11px; color: #7f849c; cursor: pointer; }
 .reorder-toggle.active { color: #cba6f7; font-weight: bold; }
+
+/* Grid Settings */
+.grid-settings .layout-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.layout-chip { padding: 6px 10px; background: #313244; color: #cdd6f4; border-radius: 8px; font-size: 12px; cursor: pointer; border: 1px solid transparent; }
+.layout-chip:hover { background: #45475a; }
+.layout-chip.active { background: rgba(203, 166, 247, 0.2); border-color: #cba6f7; color: #cba6f7; font-weight: bold; }
+.slot-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.slot-row { display: flex; align-items: center; gap: 8px; }
+.slot-num { width: 20px; text-align: center; font-size: 12px; color: #a6adc8; font-weight: bold; }
+.slot-select { flex: 1; background: #313244; color: #cdd6f4; border: 1px solid #45475a; padding: 6px 8px; border-radius: 6px; font-size: 12px; }
+.grid-slot-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #181825; color: #6c7086; gap: 6px; height: 100%; border-radius: 8px; }
+.grid-slot-empty .slot-idx { font-size: 32px; font-weight: bold; color: #45475a; }
+.grid-slot-empty .slot-hint { font-size: 11px; }
 
 .url-row { display: flex; align-items: center; padding: 10px 0; gap: 8px; border-bottom: 1px solid #313244; }
 .url-info { flex: 1; min-width: 0; cursor: pointer; }
