@@ -5,6 +5,12 @@ import { registerIpc, syncOsSideEffects } from './ipc'
 
 let mainWindow: BrowserWindow | null = null
 
+function resolveIcon(): string {
+  return is.dev
+    ? join(__dirname, '../../build/icon.png')
+    : join(process.resourcesPath, 'icon.png')
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -12,6 +18,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     backgroundColor: '#1e1e2e',
+    icon: resolveIcon(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,

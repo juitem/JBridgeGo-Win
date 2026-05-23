@@ -16,11 +16,13 @@ mac:
     - target: dmg
       arch: [arm64, x64]
   category: public.app-category.productivity
+  icon: build/icon.png
 win:
   target:
     - target: nsis
       arch: [x64]
   artifactName: ${productName}-${version}-setup.${ext}
+  icon: build/icon.ico
 nsis:
   oneClick: false
   perMachine: false
@@ -30,5 +32,6 @@ linux:
     - AppImage
     - deb
   category: Utility
+  icon: build/icon.png
 publish:
   provider: github
