@@ -2,6 +2,7 @@ appId: com.juitem.jbridgedesktop
 productName: JBridge Desktop
 directories:
   buildResources: build
+  output: release
 files:
   - '!**/.vscode/*'
   - '!src/*'
@@ -23,6 +24,8 @@ win:
       arch: [x64]
   artifactName: ${productName}-${version}-setup.${ext}
   icon: build/icon.ico
+  # Avoid winCodeSign extraction on restricted Windows accounts.
+  signAndEditExecutable: false
 nsis:
   oneClick: false
   perMachine: false
@@ -33,5 +36,3 @@ linux:
     - deb
   category: Utility
   icon: build/icon.png
-publish:
-  provider: github
