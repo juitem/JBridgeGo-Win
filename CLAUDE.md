@@ -3,7 +3,7 @@
 Electron 기반 네이티브 셸. JBridge5 등 웹 서비스(localhost:7900 등)를 OS 일관성 있게 임베드.
 
 ## Stack
-- Electron 33 + electron-vite + TypeScript
+- Electron 42 + electron-vite + TypeScript
 - Vue 3 (Composition API) + Pinia (renderer)
 - electron-store (JSON 영속화 → `app.getPath('userData')/settings.json`)
 - electron-builder (dmg / nsis / AppImage / deb)
